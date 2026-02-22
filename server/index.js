@@ -18,33 +18,27 @@ app.get("/", (req, res) => {
 });
 
 app.post("/api/chat", async (req, res) => {
-  try {
-    const { message } = req.body;
+  const { message } = req.body;
 
-    if (!message) {
-      return res.status(400).json({ error: "Mensaje requerido" });
-    }
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini", 
-      messages: [
-        { role: "system", content: "Eres un asistente experto en videojuegos, especialmente GTA 6." },
-        { role: "user", content: message }
-      ]
-    });
-
-    res.json({
-      reply: completion.choices[0].message.content
-    });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Error en OpenAI" });
+  if (!message) {
+    return res.json({ reply: "Escribe algo para poder ayudarte." });
   }
-});
 
-const PORT = process.env.PORT || 3000;
+  const text = message.toLowerCase();
 
-app.listen(PORT, () => {
-  console.log("Servidor corriendo en puerto " + PORT);
+  let reply = "";
+
+  if (text.includes("gta")) {
+    reply = "Consejo estratégico: prioriza economía y misiones secundarias al inicio. No gastes todo en armas. Invierte en propiedades pronto.";
+  } else if (text.includes("fortnite")) {
+    reply = "En Fortnite, céntrate en posicionamiento. El high ground sigue siendo clave. Practica edición rápida.";
+  } else if (text.includes("minecraft")) {
+    reply = "Primera noche: madera, pico de piedra y refugio. Prioriza hierro antes que oro.";
+  } else if (text.includes("warzone")) {
+    reply = "En Warzone, rota temprano hacia zona segura. No esperes al último círculo.";
+  } else {
+    reply = `Análisis táctico sobre: "${message}". Enfócate en economía, posicionamiento y optimización de recursos.`;
+  }
+
+  res.json({ reply });
 });
