@@ -1,44 +1,73 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import OpenAI from "openai";
 
 dotenv.config();
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+const PORT = process.env.PORT || 3000;
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+
+if (!GROQ_API_KEY) {
+  console.error("Falta GROQ_API_KEY en variables de entorno");
+}
 
 app.get("/", (req, res) => {
-  res.json({ status: "GamerGPTV6 backend activo" });
+  res.json({ status: "GamerGPTV6 backend activo con Groq" });
 });
 
 app.post("/api/chat", async (req, res) => {
-  const { message } = req.body;
+  try {
+    const { message } = req.body;
 
-  if (!message) {
-    return res.json({ reply: "Escribe algo para poder ayudarte." });
+    if (!message) {
+      return res.status(400).json({ reply: "Escribe algo para poder ayudarte." });
+    }
+
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${GROQ_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "llama3-8b-8192",
+        messages: [
+          {
+            role: "system",
+            content: "Eres GamerGPT, experto en videojuegos. Responde claro, estratégico y directo."
+          },
+          {
+            role: "user",
+            content: message
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 300
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error(data);
+      return res.status(500).json({ reply: "Error en la generación IA." });
+    }
+
+    const reply = data.choices?.[0]?.message?.content || "No se pudo generar respuesta.";
+
+    res.json({ reply });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ reply: "Error interno del servidor." });
   }
+});
 
-  const text = message.toLowerCase();
-
-  let reply = "";
-
-  if (text.includes("gta")) {
-    reply = "Consejo estratégico: prioriza economía y misiones secundarias al inicio. No gastes todo en armas. Invierte en propiedades pronto.";
-  } else if (text.includes("fortnite")) {
-    reply = "En Fortnite, céntrate en posicionamiento. El high ground sigue siendo clave. Practica edición rápida.";
-  } else if (text.includes("minecraft")) {
-    reply = "Primera noche: madera, pico de piedra y refugio. Prioriza hierro antes que oro.";
-  } else if (text.includes("warzone")) {
-    reply = "En Warzone, rota temprano hacia zona segura. No esperes al último círculo.";
-  } else {
-    reply = `Análisis táctico sobre: "${message}". Enfócate en economía, posicionamiento y optimización de recursos.`;
-  }
-
-  res.json({ reply });
+app.listen(PORT, () => {
+  console.log(`Servidor corriendo en puerto ${PORT}`);
 });
